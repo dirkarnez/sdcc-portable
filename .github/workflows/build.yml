@@ -1,0 +1,47 @@
+name: portable-release-actions-workflow
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+      - 'c*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
+permissions:
+    contents: write
+    
+jobs:
+  build:
+    name: Create Release
+    runs-on: windows-latest
+    env:
+      targetZip: sdcc-portable-${{ github.ref_name }}.zip
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: installer
+        shell: cmd
+        run: |
+          curl https://jaist.dl.sourceforge.net/project/sdcc/sdcc-win64/4.4.0/sdcc-4.4.0-rc3-x64-setup.exe?viasf=1 --output setup.exe &&^ 
+          dir
+
+      - shell: cmd
+        run: |
+          7z x setup.exe -o"installation" &&^
+          cd installation &&^
+          rmdir /s /q $PLUGINSDIR &&^
+          del /q uninstall.exe &&^ 
+          dir
+          
+      - name: Archive Release
+        uses: thedoctor0/zip-release@master
+        with:
+          type: 'zip'
+          directory: "installation"
+          filename: "${{ env.targetZip }}"
+          
+      - name: Release prebuilt
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "installation/${{ env.targetZip }}"
+          allowUpdates: true
+          token: ${{ secrets.GITHUB_TOKEN }}
